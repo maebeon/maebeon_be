@@ -1,12 +1,9 @@
-const sequelize = require('../config/db');
-const User = require('./User')(sequelize);
-const Session = require('./Session')(sequelize);
-
-// 모델 간의 관계 설정
-User.hasMany(Session, { foreignKey: 'hostId' });
-Session.belongsTo(User, { foreignKey: 'hostId' });
+const UserModel = require('./UserModel');
+const SessionModel = require('./SessionModel');
+const ChatModel = require('./ChatModel');
 
 module.exports = {
-  User,
-  Session,
+  UserModel,
+  SessionModel,
+  ChatModel
 };

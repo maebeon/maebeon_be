@@ -1,26 +1,42 @@
-const { DataTypes } = require('sequelize');
+const pool = require('../config/db');
 
-module.exports = (sequelize) => {
-  const UserModel = sequelize.define('User', {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    email: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
-    },
-    password: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-  });
+class UserModel {
+  static async create(userData) {
+    const { email, name, nickname, phone_number, profile_image } = userData;
+    const [result] = await pool.execute(
+      `INSERT INTO users (email, name, nickname, phone_number, profile_image) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [email, name, nickname, phone_number, profile_image]
+    );
+    return result.insertId;
+  }
 
-  return UserModel;
-};
+  static async findByEmail(email) {
+    const [rows] = await pool.execute(
+      'SELECT * FROM users WHERE email = ?',
+      [email]
+    );
+    return rows[0];
+  }
+
+  static async findByNickname(nickname) {
+    const [rows] = await pool.execute(
+      'SELECT * FROM users WHERE nickname = ?',
+      [nickname]
+    );
+    return rows[0];
+  }
+
+  static async updateProfile(userId, profileData) {
+    const { nickname, profile_image, gender, age, mbti, introduction } = profileData;
+    await pool.execute(
+      `UPDATE users 
+       SET nickname = ?, profile_image = ?, gender = ?, 
+           age = ?, mbti = ?, introduction = ?
+       WHERE user_id = ?`,
+      [nickname, profile_image, gender, age, mbti, introduction, userId]
+    );
+  }
+}
+
+module.exports = UserModel;

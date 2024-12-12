@@ -1,19 +1,44 @@
-const { Session } = require('../models');
+const SessionModel = require('../models/SessionModel');
+const ChatModel = require('../models/ChatModel');
 
-exports.createSession = async (data) => {
-  try {
-    const session = await Session.create(data);
-    return session;
-  } catch (error) {
-    throw new Error('Failed to create session');
-  }
-};
+class SessionService {
+  static async createSession(sessionData) {
+    // 세션 생성
+    const sessionId = await SessionModel.create(sessionData);
+    
+    // 채팅방 생성
+    await ChatModel.createChatRoom(sessionId);
+    
+    // 30분 후 자동 종료 설정
+    setTimeout(async () => {
+      await SessionModel.deactivate(sessionId);
+    }, 30 * 60 * 1000);
 
-exports.getSessions = async () => {
-  try {
-    const sessions = await Session.findAll();
-    return sessions;
-  } catch (error) {
-    throw new Error('Failed to retrieve sessions');
+    return sessionId;
   }
-};
+
+  static async getNearbyActiveSessions(latitude, longitude) {
+    return await SessionModel.findNearby(latitude, longitude);
+  }
+
+  static async extendSession(sessionId) {
+    const [extensions] = await pool.execute(
+      'SELECT COUNT(*) as count FROM session_extensions WHERE session_id = ?',
+      [sessionId]
+    );
+
+    if (extensions[0].count >= 2) {
+      throw new Error('Maximum extension limit reached');
+    }
+
+    await SessionModel.extend(sessionId);
+    
+    // 연장 기록 추가
+    await pool.execute(
+      'INSERT INTO session_extensions (session_id) VALUES (?)',
+      [sessionId]
+    );
+  }
+}
+
+module.exports = SessionService;
