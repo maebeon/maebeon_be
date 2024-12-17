@@ -4,6 +4,7 @@ const { Server } = require('socket.io');  // 이 부분 추가
 require('dotenv').config();
 const cors = require('cors');
 const routes = require('./routes');
+const sessionRoutes = require("./routes/sessionRoutes"); // 라우트 파일 경로 확인
 
 const app = express();
 const server = http.createServer(app);
@@ -29,7 +30,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // 라우트 설정
-app.use('/api', routes);
+app.use("/api/sessions", sessionRoutes);
 
 // 소켓 연결 핸들링
 io.on('connection', (socket) => {

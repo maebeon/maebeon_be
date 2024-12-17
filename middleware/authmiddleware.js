@@ -3,23 +3,30 @@ const UserModel = require("../models/UserModel");
 
 const authMiddleware = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(" ")[1]; // Bearer 토큰 추출
+    const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
-      return res.status(401).json({ error: "No token provided" });
+      console.error('No token provided');
+      return res.status(401).json({ error: 'Unauthorized: No token provided' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // JWT 검증
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("Decoded Token:", decoded);
+
+
     const user = await UserModel.findById(decoded.userId);
-
+    console.log('User from DB:', user);
     if (!user) {
-      return res.status(401).json({ error: "User not found" });
+      console.error("User not found");
+      return res.status(401).json({ error: "Unauthorized: User not found" });
     }
 
-    req.user = user; // 요청 객체에 사용자 정보 추가
+    req.user = user; // 인증된 사용자 정보 추가
     next();
   } catch (error) {
-    return res.status(401).json({ error: "Invalid or expired token" });
+    console.error('Auth Middleware Error:', error.message);
+    return res.status(401).json({ error: 'Unauthorized: Invalid or expired token' });
   }
 };
+
 
 module.exports = authMiddleware;

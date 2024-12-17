@@ -4,6 +4,7 @@ const sessionController = require('../controllers/sessionController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // 기존에 sessionController에 정의된 메서드들만 남깁니다
+router.get('/', sessionController.getAllSessions);
 router.get('/nearby', sessionController.getNearbyActiveSessions);
 router.post('/', authMiddleware, sessionController.createSession);
 router.get('/:sessionId', sessionController.getSessionDetail);

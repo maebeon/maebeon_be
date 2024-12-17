@@ -11,6 +11,14 @@ class UserModel {
     return result.insertId;
   }
 
+  static async findById(userId) {
+    const [rows] = await pool.execute(
+      'SELECT * FROM users WHERE user_id = ?',
+      [userId]
+    );
+    return rows[0] || null; // 사용자 데이터를 반환하거나 null 반환
+  }
+
   static async findByEmail(email) {
     const [rows] = await pool.execute(
       'SELECT * FROM users WHERE email = ?',

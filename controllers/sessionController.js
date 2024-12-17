@@ -2,6 +2,17 @@
 const pool = require('../config/db');
 
 const sessionController = {
+
+    getAllSessions: async (req, res) => {
+        try {
+          const [rows] = await pool.execute("SELECT * FROM sessions");
+          res.status(200).json(rows);
+        } catch (error) {
+          console.error("Error fetching all sessions:", error.message);
+          res.status(500).json({ error: "Failed to fetch sessions" });
+        }
+      },
+      
     // 근처 활성화된 세션 찾기 (반경 5km 이내)
     async getNearbyActiveSessions(req, res) {
         try {
@@ -35,50 +46,68 @@ const sessionController = {
     async createSession(req, res) {
         try {
           const {
-            host_id, // 프론트엔드에서 보내는 호스트 ID
-            category_id,
             title,
+            location,
+            category_id,
             max_participants,
             latitude,
             longitude,
           } = req.body;
+
+          if (!title || !location || !category_id || !latitude || !longitude) {
+            return res.status(400).json({ error: "Missing required fields" });
+          }
+          const host_id = req.user.user_id; // 인증된 사용자 ID 가져오기
+      const start_time = new Date();
+      const end_time = new Date(start_time.getTime() + 30 * 60000); // 30분 후
     
-          // 시작 시간은 현재 시간, 종료 시간은 30분 후로 설정
-          const start_time = new Date();
-          const end_time = new Date(start_time.getTime() + 30 * 60000); // 30분 = 30 * 60000 밀리초
-    
-          // 세션 생성 쿼리 실행
-          const [result] = await pool.execute(
-            `
-            INSERT INTO sessions 
-            (host_id, category_id, title, max_participants, start_time, end_time, location, is_active) 
-            VALUES (?, ?, ?, ?, ?, ?, POINT(?, ?), TRUE)
-          `,
-            [host_id, category_id, title, max_participants, start_time, end_time, latitude, longitude]
-          );
-    
-          // 세션 자동 종료를 위한 타이머 설정
-          setTimeout(async () => {
-            try {
-              await pool.execute(
-                "UPDATE sessions SET is_active = FALSE WHERE session_id = ?",
-                [result.insertId]
-              );
-              console.log(`Session ID ${result.insertId} has been deactivated.`);
-            } catch (error) {
-              console.error("Error deactivating session:", error);
-            }
-          }, 30 * 60000); // 30분 후 자동 종료
-    
-          res.status(201).json({
-            message: "Session created successfully",
-            session_id: result.insertId,
-          });
-        } catch (error) {
-          console.error("Error creating session:", error);
-          res.status(500).json({ error: "Internal server error" });
-        }
-      },
+       // category_name 조회
+       const [categoryRows] = await pool.execute(
+        "SELECT name FROM categories WHERE category_id = ?",
+        [category_id]
+      );
+      if (categoryRows.length === 0) {
+        return res.status(400).json({ error: "Invalid category_id" });
+      }
+      const category_name = categoryRows[0].name;
+      
+      // 세션 생성 쿼리
+      const [result] = await pool.execute(
+        `
+        INSERT INTO sessions 
+        (host_id, category_id, title, max_participants, start_time, end_time, location, is_active) 
+        VALUES (?, ?, ?, ?, ?, ?, POINT(?, ?), TRUE)
+      `,
+        [
+          host_id,
+          category_id || 1, // 기본값 설정
+          title,
+          max_participants || 10, // 기본값 설정
+          start_time,
+          end_time,
+          latitude,
+          longitude,
+        ]
+      );
+
+      res.status(201).json({
+        message: "Session created successfully",
+        session_id: result.insertId,
+        title,
+        location,
+        category_name, // 카테고리 이름 반환
+        max_participants,
+        created_by: req.user.name,
+        created_at: start_time.toISOString(),
+        latitude, // 위도
+        longitude, // 경도
+      });
+    } catch (error) {
+      console.error("Error creating session:", error.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+
 
     async getSessionsByCategory(req, res) {
         try {
