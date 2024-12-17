@@ -3,9 +3,19 @@ import client from './client';
 export const authApi = {
     // 카카오 로그인
     kakaoLogin: async (code) => {
-        const response = await client.get(`/auth/kakao/callback?code=${code}`);
-        return response.data;
-      },
+        try {
+            const response = await client.get('/auth/kakao/callback', {
+                params: { 
+                    code,
+                    state: Math.random().toString(36).substr(2, 11) // 중복 방지를 위한 state 추가
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Auth API Error:', error.response?.data || error);
+            throw error;
+        }
+    },
 
     // 회원가입 약관 동의
     submitTerms: async (termsData) => {

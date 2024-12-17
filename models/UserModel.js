@@ -2,11 +2,11 @@ const pool = require('../config/db');
 
 class UserModel {
   static async create(userData) {
-    const { email, name, nickname, phone_number, profile_image } = userData;
+    const { email, name, nickname, profile_image } = userData;
     const [result] = await pool.execute(
-      `INSERT INTO users (email, name, nickname, phone_number, profile_image) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [email, name, nickname, phone_number, profile_image]
+      `INSERT INTO users (email, name, nickname, profile_image) 
+       VALUES (?, ?, ?, ?)`,
+      [email, name, nickname || name, profile_image || null] // profile_image가 없으면 null 사용
     );
     return result.insertId;
   }

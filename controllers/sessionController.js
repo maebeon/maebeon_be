@@ -34,46 +34,51 @@ const sessionController = {
     // 세션 생성
     async createSession(req, res) {
         try {
-            const { 
-                host_id, 
-                category_id, 
-                title, 
-                max_participants, 
-                latitude,
-                longitude
-            } = req.body;
-
-            // 시작 시간은 현재 시간, 종료 시간은 30분 후로 설정
-            const start_time = new Date();
-            const end_time = new Date(start_time.getTime() + 30 * 60000); // 30분 = 30 * 60000 밀리초
-
-            const [result] = await pool.execute(`
-                INSERT INTO sessions 
-                (host_id, category_id, title, max_participants, start_time, end_time, location, is_active) 
-                VALUES (?, ?, ?, ?, ?, ?, POINT(?, ?), TRUE)
-            `, [host_id, category_id, title, max_participants, start_time, end_time, latitude, longitude]);
-
-            // 세션 자동 종료를 위한 타이머 설정
-            setTimeout(async () => {
-                try {
-                    await pool.execute(
-                        'UPDATE sessions SET is_active = FALSE WHERE session_id = ?',
-                        [result.insertId]
-                    );
-                } catch (error) {
-                    console.error('Error deactivating session:', error);
-                }
-            }, 30 * 60000); // 30분
-
-            res.json({ 
-                message: 'Session created successfully', 
-                session_id: result.insertId 
-            });
+          const {
+            host_id, // 프론트엔드에서 보내는 호스트 ID
+            category_id,
+            title,
+            max_participants,
+            latitude,
+            longitude,
+          } = req.body;
+    
+          // 시작 시간은 현재 시간, 종료 시간은 30분 후로 설정
+          const start_time = new Date();
+          const end_time = new Date(start_time.getTime() + 30 * 60000); // 30분 = 30 * 60000 밀리초
+    
+          // 세션 생성 쿼리 실행
+          const [result] = await pool.execute(
+            `
+            INSERT INTO sessions 
+            (host_id, category_id, title, max_participants, start_time, end_time, location, is_active) 
+            VALUES (?, ?, ?, ?, ?, ?, POINT(?, ?), TRUE)
+          `,
+            [host_id, category_id, title, max_participants, start_time, end_time, latitude, longitude]
+          );
+    
+          // 세션 자동 종료를 위한 타이머 설정
+          setTimeout(async () => {
+            try {
+              await pool.execute(
+                "UPDATE sessions SET is_active = FALSE WHERE session_id = ?",
+                [result.insertId]
+              );
+              console.log(`Session ID ${result.insertId} has been deactivated.`);
+            } catch (error) {
+              console.error("Error deactivating session:", error);
+            }
+          }, 30 * 60000); // 30분 후 자동 종료
+    
+          res.status(201).json({
+            message: "Session created successfully",
+            session_id: result.insertId,
+          });
         } catch (error) {
-            console.error('Error:', error);
-            res.status(500).json({ error: 'Internal server error' });
+          console.error("Error creating session:", error);
+          res.status(500).json({ error: "Internal server error" });
         }
-    },
+      },
 
     async getSessionsByCategory(req, res) {
         try {
