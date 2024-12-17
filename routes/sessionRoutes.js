@@ -9,7 +9,9 @@ router.post('/', authMiddleware, sessionController.createSession);
 router.get('/:sessionId', sessionController.getSessionDetail);
 router.post('/join', authMiddleware, sessionController.joinSession);  // /:sessionId/join을 /join으로 수정
 router.post('/:sessionId/extend', authMiddleware, sessionController.extendSession);
+router.get('/category/:category', sessionController.getSessionsByCategory);
 
+module.exports = router;
 // chat 관련 라우트는 제거 (필요하다면 나중에 추가)
 // router.get('/:sessionId/chat', authMiddleware, sessionController.getChatHistory);
 

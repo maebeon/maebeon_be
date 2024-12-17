@@ -5,7 +5,7 @@ export const authApi = {
     kakaoLogin: async (code) => {
         const response = await client.get(`/auth/kakao/callback?code=${code}`);
         return response.data;
-    },
+      },
 
     // 회원가입 약관 동의
     submitTerms: async (termsData) => {

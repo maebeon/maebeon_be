@@ -75,6 +75,29 @@ const sessionController = {
         }
     },
 
+    async getSessionsByCategory(req, res) {
+        try {
+            const { category } = req.params;
+            const [sessions] = await pool.execute(`
+                SELECT s.*, 
+                    u.nickname as host_nickname,
+                    c.name as category_name,
+                    COUNT(sp.user_id) as current_participants
+                FROM sessions s
+                JOIN users u ON s.host_id = u.user_id
+                JOIN categories c ON s.category_id = c.category_id
+                LEFT JOIN session_participants sp ON s.session_id = sp.session_id
+                WHERE c.name = ? AND s.is_active = TRUE
+                GROUP BY s.session_id`,
+                [category]
+            );
+            res.json(sessions);
+        } catch (error) {
+            console.error('Error:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    },
+
     // 세션 상세 정보 조회
     async getSessionDetail(req, res) {
         try {
@@ -173,6 +196,45 @@ const sessionController = {
         } catch (error) {
             console.error('Error:', error);
             res.status(500).json({ error: 'Internal server error' });
+        }
+    },
+    async getNearbyActiveSessions(req, res) {
+        try {
+            const { latitude, longitude } = req.query;
+    
+            // 좌표 유효성 검사
+            if (!latitude || !longitude) {
+                return res.status(400).json({ error: 'Latitude and longitude are required' });
+            }
+    
+            const [sessions] = await pool.execute(`
+                SELECT 
+                    s.session_id, 
+                    s.title, 
+                    ST_X(s.location) as longitude,
+                    ST_Y(s.location) as latitude,
+                    u.nickname as host_nickname,
+                    c.name as category_name,
+                    s.max_participants,
+                    COUNT(sp.user_id) as current_participants
+                FROM sessions s
+                LEFT JOIN users u ON s.host_id = u.user_id
+                LEFT JOIN categories c ON s.category_id = c.category_id
+                LEFT JOIN session_participants sp ON s.session_id = sp.session_id AND sp.status = 'ACCEPTED'
+                WHERE s.is_active = TRUE
+                AND s.end_time > NOW()
+                GROUP BY s.session_id
+                HAVING current_participants < s.max_participants
+                ORDER BY s.session_id
+            `, [latitude, longitude]);
+    
+            res.json(sessions);
+        } catch (error) {
+            console.error('Error in getNearbyActiveSessions:', error);
+            res.status(500).json({
+                error: 'Internal server error',
+                details: error.message
+            });
         }
     }
 };
